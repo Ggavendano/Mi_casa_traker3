@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>🏠 Mi Casa Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --lavender: #E8E0F5;
+    --lavender-mid: #C9B8E8;
+    --lavender-dark: #9B7EC8;
+    --pink: #F9E4EE;
+    --pink-mid: #F0B8D4;
+    --pink-dark: #D4789A;
+    --mint: #E0F5EE;
+    --mint-mid: #A8DFC9;
+    --mint-dark: #5AB894;
+    --cream: #FFF8F0;
+    --peach: #FFE8D6;
+    --peach-dark: #E8A87C;
+    --text: #4A3F6B;
+    --text-light: #8B7BAA;
+    --white: #FFFFFF;
+    --shadow: 0 4px 20px rgba(155,126,200,0.15);
+    --radius: 18px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: linear-gradient(135deg, var(--lavender) 0%, var(--pink) 50%, var(--mint) 100%);
+    min-height: 100vh;
+    color: var(--text);
+    overflow-x: hidden;
+  }
+
+  /* ─── ROLE SELECTOR ─── */
+  #role-screen {
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 2rem 1.5rem; text-align: center; gap: 1.5rem;
+  }
+  .role-logo { font-size: 3.5rem; }
+  .role-title { font-size: 1.8rem; font-weight: 900; color: var(--text); }
+  .role-cards { display: flex; flex-direction: column; gap: 1rem; width: 100%; max-width: 340px; }
+  .role-card {
+    background: var(--white); border-radius: var(--radius);
+    padding: 1.4rem 1.2rem; display: flex; align-items: center; gap: 1rem;
+    cursor: pointer; box-shadow: var(--shadow); border: 2px solid transparent;
+    transition: all 0.2s ease;
+  }
+  .role-card:active { transform: scale(0.97); }
+  .role-card.worker { border-color: var(--mint-dark); }
+  .role-card.supervisor { border-color: var(--lavender-dark); }
+  .role-card .rc-icon { font-size: 2.2rem; }
+  .role-card .rc-text { text-align: left; }
+  .role-card .rc-name { font-weight: 800; font-size: 1rem; color: var(--text); }
+  .role-card .rc-desc { font-size: 0.8rem; color: var(--text-light); margin-top: 2px; }
+
+  /* ─── PIN MODAL ─── */
+  #pin-screen {
+    display: none; position: fixed; inset: 0;
+    background: rgba(74,63,107,0.5); z-index: 600;
+    align-items: flex-end; justify-content: center;
+  }
+  #pin-screen.open { display: flex; }
+  .pin-box {
+    background: var(--white); border-radius: 24px 24px 0 0;
+    padding: 1.8rem 1.4rem 2.5rem; width: 100%; max-width: 400px;
+    animation: slideUp 0.25s ease; text-align: center;
+  }
+  .pin-title { font-size: 1.1rem; font-weight: 900; color: var(--text); margin-bottom: 0.4rem; }
+  .pin-sub { font-size: 0.82rem; color: var(--text-light); margin-bottom: 1.2rem; }
+  .pin-dots { display: flex; justify-content: center; gap: 0.8rem; margin-bottom: 1.5rem; }
+  .pin-dot {
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid var(--lavender-mid); background: transparent; transition: all 0.15s;
+  }
+  .pin-dot.filled { background: var(--lavender-dark); border-color: var(--lavender-dark); }
+  .pin-keypad { display: grid; grid-template-columns: repeat(3,1fr); gap: 0.6rem; max-width: 260px; margin: 0 auto; }
+  .pin-key {
+    background: var(--lavender); color: var(--text); border: none;
+    border-radius: 14px; padding: 1rem; font-family: 'Nunito',sans-serif;
+    font-size: 1.2rem; font-weight: 800; cursor: pointer; transition: all 0.15s;
+  }
+  .pin-key:active { background: var(--lavender-dark); color: white; transform: scale(0.94); }
+  .pin-key.del { background: var(--pink); color: var(--pink-dark); }
+  .pin-key.cancel-key { background: var(--peach); color: var(--peach-dark); font-size: 0.78rem; }
+  .pin-error { color: var(--pink-dark); font-size: 0.82rem; font-weight: 700; margin-top: 0.8rem; min-height: 1.2rem; }
+
+  /* ─── MAIN APP ─── */
+  #app { display: none; min-height: 100vh; flex-direction: column; }
+  .app-header {
+    background: var(--white); padding: 1rem 1.2rem 0.6rem;
+    box-shadow: 0 2px 10px rgba(155,126,200,0.12);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem; }
+  .header-title { font-size: 1.2rem; font-weight: 900; color: var(--text); }
+  .header-date { font-size: 0.75rem; color: var(--text-light); font-weight: 600; }
+  .role-badge {
+    background: var(--lavender); color: var(--lavender-dark);
+    font-size: 0.7rem; font-weight: 800; padding: 3px 10px;
+    border-radius: 20px; cursor: pointer;
+  }
+  .tabs { display: flex; gap: 0.4rem; overflow-x: auto; padding-bottom: 0.5rem; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    white-space: nowrap; border: none; background: var(--lavender);
+    color: var(--text-light); font-family: 'Nunito',sans-serif;
+    font-weight: 700; font-size: 0.8rem; padding: 0.5rem 1rem;
+    border-radius: 20px; cursor: pointer; transition: all 0.2s; flex-shrink: 0;
+  }
+  .tab-btn.active { background: var(--lavender-dark); color: var(--white); box-shadow: 0 3px 12px rgba(155,126,200,0.4); }
+  .content { flex: 1; padding: 1rem; overflow-y: auto; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ─── ACTIVITY CARDS ─── */
+  .section-title {
+    font-size: 0.7rem; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--text-light); margin: 1.2rem 0 0.6rem;
+  }
+  .activity-card {
+    background: var(--white); border-radius: var(--radius);
+    padding: 0.9rem 1rem; margin-bottom: 0.6rem; box-shadow: var(--shadow);
+    display: flex; align-items: flex-start; gap: 0.8rem;
+    transition: all 0.25s ease; border-left: 4px solid transparent;
+  }
+  .activity-card.done { opacity: 0.72; }
+  .activity-card.done .act-name { text-decoration: line-through; color: var(--text-light); }
+  .check-btn {
+    width: 32px; height: 32px; border-radius: 50%; border: 2.5px solid var(--lavender-mid);
+    background: transparent; cursor: pointer; display: flex; align-items: center;
+    justify-content: center; flex-shrink: 0; transition: all 0.2s; margin-top: 1px;
+  }
+  .check-btn.checked { background: var(--mint-dark); border-color: var(--mint-dark); }
+  .check-btn.checked::after { content: '✓'; color: white; font-weight: 900; font-size: 0.9rem; }
+  .check-btn:not(.checked):hover { border-color: var(--mint-dark); background: var(--mint); }
+  .check-display {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 1rem; margin-top: 1px;
+  }
+  .check-display.done-icon { background: var(--mint-dark); color: white; font-weight: 900; }
+  .check-display.pending-icon { background: var(--lavender); color: var(--text-light); }
+  .act-content { flex: 1; min-width: 0; }
+  .act-name { font-weight: 700; font-size: 0.92rem; color: var(--text); }
+  .act-emoji { margin-right: 5px; }
+  .act-meta { font-size: 0.72rem; color: var(--text-light); margin-top: 3px; display: flex; gap: 0.6rem; flex-wrap: wrap; }
+  .act-time { color: var(--lavender-dark); font-weight: 700; }
+  .act-obs { color: var(--peach-dark); font-weight: 600; font-style: italic; }
+  .obs-btn {
+    background: none; border: none; cursor: pointer; font-size: 1rem;
+    padding: 4px; border-radius: 8px; transition: background 0.15s; margin-top: 1px;
+  }
+  .obs-btn:hover { background: var(--peach); }
+
+  /* ─── OBS MODAL ─── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(74,63,107,0.45); z-index: 500;
+    align-items: flex-end; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: var(--white); border-radius: 24px 24px 0 0;
+    padding: 1.5rem 1.2rem 2.5rem; width: 100%; max-width: 480px;
+    box-shadow: 0 -10px 40px rgba(74,63,107,0.2); animation: slideUp 0.25s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(60px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .modal-title { font-weight: 800; font-size: 1rem; color: var(--text); margin-bottom: 1rem; }
+  .modal-textarea {
+    width: 100%; border: 2px solid var(--lavender-mid); border-radius: 12px;
+    padding: 0.8rem; font-family: 'Nunito',sans-serif; font-size: 0.9rem;
+    color: var(--text); resize: none; outline: none; transition: border-color 0.2s;
+  }
+  .modal-textarea:focus { border-color: var(--lavender-dark); }
+  .modal-actions { display: flex; gap: 0.6rem; margin-top: 0.8rem; }
+  .btn-save {
+    flex: 1; background: var(--lavender-dark); color: white; border: none;
+    border-radius: 12px; padding: 0.7rem; font-family: 'Nunito',sans-serif;
+    font-weight: 800; font-size: 0.9rem; cursor: pointer; transition: opacity 0.15s;
+  }
+  .btn-save:active { opacity: 0.85; }
+  .btn-cancel {
+    flex: 1; background: var(--lavender); color: var(--text-light); border: none;
+    border-radius: 12px; padding: 0.7rem; font-family: 'Nunito',sans-serif;
+    font-weight: 700; font-size: 0.9rem; cursor: pointer;
+  }
+
+  /* ─── WEEKLY CALENDAR ─── */
+  .week-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+  .week-nav-btn {
+    background: var(--white); border: none; border-radius: 12px;
+    width: 36px; height: 36px; cursor: pointer; font-size: 1.1rem;
+    box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center;
+    color: var(--lavender-dark); font-weight: 900;
+  }
+  .week-label { font-weight: 800; font-size: 0.9rem; color: var(--text); }
+  .day-tabs { display: flex; gap: 0.3rem; overflow-x: auto; margin-bottom: 1rem; padding-bottom: 2px; }
+  .day-tabs::-webkit-scrollbar { display: none; }
+  .day-tab {
+    display: flex; flex-direction: column; align-items: center;
+    background: var(--white); border-radius: 14px; padding: 0.5rem 0.6rem;
+    cursor: pointer; min-width: 46px; border: 2px solid transparent;
+    box-shadow: var(--shadow); transition: all 0.2s; flex-shrink: 0;
+  }
+  .day-tab.today { border-color: var(--lavender-dark); background: var(--lavender); }
+  .day-tab.selected { background: var(--lavender-dark); }
+  .day-tab.selected .day-name, .day-tab.selected .day-num { color: white; }
+  .day-name { font-size: 0.65rem; font-weight: 800; color: var(--text-light); text-transform: uppercase; }
+  .day-num { font-size: 1.1rem; font-weight: 900; color: var(--text); }
+  .day-dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 3px; }
+  .day-dot.has-tasks { background: var(--mint-dark); }
+  .day-dot.all-done { background: var(--peach-dark); }
+  .day-dot.empty { background: transparent; }
+
+  /* ─── MENU SEMANAL ─── */
+  .menu-week-grid { display: flex; flex-direction: column; gap: 0.7rem; }
+  .menu-day-card {
+    background: var(--white); border-radius: var(--radius);
+    box-shadow: var(--shadow); overflow: hidden;
+  }
+  .menu-day-header {
+    background: linear-gradient(90deg, var(--lavender-dark), var(--pink-dark));
+    color: white; padding: 0.6rem 1rem;
+    font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem;
+  }
+  .menu-day-header.today-header { background: linear-gradient(90deg, var(--mint-dark), var(--lavender-dark)); }
+  .menu-meals { padding: 0.7rem 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+  .meal-row { display: flex; align-items: center; gap: 0.7rem; }
+  .meal-label {
+    font-size: 0.72rem; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 0.5px; color: var(--text-light); min-width: 64px;
+  }
+  .meal-value { flex: 1; font-size: 0.88rem; font-weight: 600; color: var(--text); }
+  .meal-value.empty-meal { color: var(--lavender-mid); font-style: italic; font-weight: 400; }
+  .meal-input {
+    flex: 1; border: 1.5px solid var(--lavender-mid); border-radius: 10px;
+    padding: 0.4rem 0.7rem; font-family: 'Nunito',sans-serif; font-size: 0.85rem;
+    color: var(--text); outline: none; background: var(--cream); transition: border-color 0.2s;
+  }
+  .meal-input:focus { border-color: var(--lavender-dark); }
+  .meal-save-btn {
+    background: var(--mint-dark); color: white; border: none; border-radius: 8px;
+    padding: 0.3rem 0.6rem; font-family: 'Nunito',sans-serif; font-weight: 700;
+    font-size: 0.72rem; cursor: pointer; white-space: nowrap;
+  }
+
+  /* ─── SHOPPING LIST ─── */
+  .shop-input-row { display: flex; gap: 0.6rem; margin-bottom: 0.6rem; }
+  .shop-input {
+    flex: 1; border: 2px solid var(--lavender-mid); border-radius: 12px;
+    padding: 0.7rem 1rem; font-family: 'Nunito',sans-serif; font-size: 0.9rem;
+    color: var(--text); outline: none; background: var(--white); transition: border-color 0.2s;
+  }
+  .shop-input:focus { border-color: var(--lavender-dark); }
+  .shop-add-btn {
+    background: var(--lavender-dark); color: white; border: none;
+    border-radius: 12px; width: 44px; height: 44px; font-size: 1.3rem;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    box-shadow: var(--shadow); flex-shrink: 0;
+  }
+  .shop-item {
+    background: var(--white); border-radius: var(--radius);
+    padding: 0.75rem 1rem; margin-bottom: 0.5rem;
+    display: flex; align-items: center; gap: 0.8rem; box-shadow: var(--shadow);
+  }
+  .shop-check {
+    width: 26px; height: 26px; border-radius: 50%;
+    border: 2.5px solid var(--pink-mid); background: transparent;
+    cursor: pointer; flex-shrink: 0; display: flex; align-items: center;
+    justify-content: center; transition: all 0.2s;
+  }
+  .shop-check.bought { background: var(--pink-dark); border-color: var(--pink-dark); color: white; font-weight: 900; }
+  .shop-item-text { flex: 1; font-weight: 600; font-size: 0.9rem; color: var(--text); }
+  .shop-item.bought-item .shop-item-text { text-decoration: line-through; color: var(--text-light); }
+  .shop-del { background: none; border: none; cursor: pointer; font-size: 1rem; padding: 4px; color: var(--text-light); }
+  .shop-del:hover { color: var(--pink-dark); }
+  .shop-cat-label {
+    font-size: 0.72rem; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--text-light);
+    background: var(--pink); border-radius: 8px; padding: 3px 10px;
+    display: inline-block; margin-bottom: 0.5rem; margin-top: 0.8rem;
+  }
+
+  /* ─── DASHBOARD ─── */
+  .dash-header { background: var(--white); border-radius: var(--radius); padding: 1.2rem; margin-bottom: 1rem; box-shadow: var(--shadow); }
+  .dash-greeting { font-size: 1.1rem; font-weight: 900; color: var(--text); }
+  .dash-sub { font-size: 0.78rem; color: var(--text-light); margin-top: 3px; }
+  .dash-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 1rem; }
+  .stat-card { background: var(--white); border-radius: var(--radius); padding: 1rem; box-shadow: var(--shadow); text-align: center; }
+  .stat-num { font-size: 2rem; font-weight: 900; color: var(--lavender-dark); }
+  .stat-label { font-size: 0.72rem; font-weight: 700; color: var(--text-light); margin-top: 3px; }
+  .progress-card { background: var(--white); border-radius: var(--radius); padding: 1.2rem; box-shadow: var(--shadow); margin-bottom: 0.6rem; }
+  .prog-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; }
+  .prog-name { font-weight: 700; font-size: 0.9rem; color: var(--text); }
+  .prog-pct { font-weight: 800; font-size: 0.9rem; color: var(--lavender-dark); }
+  .prog-bar { height: 10px; background: var(--lavender); border-radius: 10px; overflow: hidden; }
+  .prog-fill { height: 100%; background: linear-gradient(90deg, var(--lavender-dark), var(--mint-dark)); border-radius: 10px; transition: width 0.5s ease; }
+  .prog-meta { font-size: 0.72rem; color: var(--text-light); margin-top: 5px; }
+
+  @keyframes pop { 0%{transform:scale(0);opacity:0} 60%{transform:scale(1.3);opacity:1} 100%{transform:scale(1);opacity:1} }
+  .check-btn.just-checked { animation: pop 0.3s ease; }
+
+  .toast {
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+    background: var(--text); color: white; padding: 0.6rem 1.2rem;
+    border-radius: 20px; font-size: 0.82rem; font-weight: 700;
+    z-index: 999; opacity: 0; pointer-events: none; transition: opacity 0.2s; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+  .empty-state { text-align: center; padding: 2.5rem 1rem; color: var(--text-light); }
+  .empty-state .es-icon { font-size: 3rem; margin-bottom: 0.5rem; }
+  .empty-state p { font-weight: 600; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+
+<!-- ══════ ROLE SELECTOR ══════ -->
+<div id="role-screen">
+  <div class="role-logo">🏠</div>
+  <div class="role-title">Mi Casa Tracker</div>
+  <div class="role-cards">
+    <div class="role-card worker" onclick="enterApp('worker')">
+      <div class="rc-icon">👩‍🍳</div>
+      <div class="rc-text">
+        <div class="rc-name">Responsabilidades del Hogar</div>
+        <div class="rc-desc">Marcar actividades completadas</div>
+      </div>
+    </div>
+    <div class="role-card supervisor" onclick="showPin()">
+      <div class="rc-icon">👑</div>
+      <div class="rc-text">
+        <div class="rc-name">Seguimiento de Actividades</div>
+        <div class="rc-desc">Ver cumplimiento y resumen del día</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ PIN SCREEN ══════ -->
+<div id="pin-screen">
+  <div class="pin-box">
+    <div class="pin-title">🔐 Acceso Supervisora</div>
+    <div class="pin-sub">Ingresa el código de acceso</div>
+    <div class="pin-dots" id="pin-dots">
+      <div class="pin-dot" id="pd0"></div>
+      <div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div>
+      <div class="pin-dot" id="pd3"></div>
+    </div>
+    <div class="pin-keypad">
+      <button class="pin-key" onclick="pinKey('1')">1</button>
+      <button class="pin-key" onclick="pinKey('2')">2</button>
+      <button class="pin-key" onclick="pinKey('3')">3</button>
+      <button class="pin-key" onclick="pinKey('4')">4</button>
+      <button class="pin-key" onclick="pinKey('5')">5</button>
+      <button class="pin-key" onclick="pinKey('6')">6</button>
+      <button class="pin-key" onclick="pinKey('7')">7</button>
+      <button class="pin-key" onclick="pinKey('8')">8</button>
+      <button class="pin-key" onclick="pinKey('9')">9</button>
+      <button class="pin-key cancel-key" onclick="closePin()">✕ Cancelar</button>
+      <button class="pin-key" onclick="pinKey('0')">0</button>
+      <button class="pin-key del" onclick="pinDel()">⌫</button>
+    </div>
+    <div class="pin-error" id="pin-error"></div>
+  </div>
+</div>
+
+<!-- ══════ MAIN APP ══════ -->
+<div id="app">
+  <div class="app-header">
+    <div class="header-top">
+      <div>
+        <div class="header-title">🏠 Mi Casa</div>
+        <div class="header-date" id="header-date"></div>
+      </div>
+      <div class="role-badge" id="role-badge" onclick="backToRoles()">Cambiar 🔄</div>
+    </div>
+    <div class="tabs" id="main-tabs"></div>
+  </div>
+  <div class="content">
+    <div id="tab-monthly" class="tab-panel"><div id="monthly-content"></div></div>
+    <div id="tab-daily" class="tab-panel">
+      <div class="week-nav">
+        <button class="week-nav-btn" onclick="changeWeek(-1)">‹</button>
+        <div class="week-label" id="week-label"></div>
+        <button class="week-nav-btn" onclick="changeWeek(1)">›</button>
+      </div>
+      <div class="day-tabs" id="day-tabs"></div>
+      <div id="daily-content"></div>
+    </div>
+    <div id="tab-menu" class="tab-panel"><div id="menu-content"></div></div>
+    <div id="tab-shopping" class="tab-panel"><div id="shopping-content"></div></div>
+    <div id="tab-dashboard" class="tab-panel"><div id="dashboard-content"></div></div>
+  </div>
+</div>
+
+<!-- OBS MODAL -->
+<div class="modal-overlay" id="obs-modal">
+  <div class="modal-box">
+    <div class="modal-title" id="modal-act-name">📝 Observación</div>
+    <textarea class="modal-textarea" id="obs-textarea" rows="4" placeholder="Escribe tu observación aquí..."></textarea>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-save" onclick="saveObs()">Guardar ✨</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════
+// DATA DEFINITIONS
+// ═══════════════════════════════════════
+const MONTHLY_ACTS = [
+  { id:'m1', name:'Planchado', emoji:'👔' },
+  { id:'m2', name:'Organizar closets', emoji:'🚪' },
+  { id:'m3', name:'Organizar nevera', emoji:'🧊' },
+  { id:'m4', name:'Limpieza profunda de gabinetes', emoji:'🧹' },
+  { id:'m5', name:'Limpieza de ventanas', emoji:'🪟' },
+];
+
+const DAILY_ACTS = [
+  { id:'d1',  name:'Pañalera',            emoji:'🍼', days: null },
+  { id:'d2',  name:'Desayuno',            emoji:'🥐', days: null },
+  { id:'d3',  name:'Almuerzo',            emoji:'🍽️', days: null },
+  { id:'d4',  name:'Cena',               emoji:'🌙', days: null },
+  { id:'d5',  name:'Lavar ropa',          emoji:'👗', days: null },
+  { id:'d6',  name:'Bajar a los perros',  emoji:'🐕', days: null },
+  { id:'d7',  name:'Limpiar a los perros',emoji:'🛁', days: null },
+  { id:'d8',  name:'Comida de perros',    emoji:'🦴', days: null },
+  { id:'d9',  name:'Limpieza general',    emoji:'✨', days: null },
+  { id:'d10', name:'Limpieza de baños',   emoji:'🚿', days: [1,4] },
+  { id:'d11', name:'Cambiar sábanas',     emoji:'🛏️', days: [1,4] },
+  { id:'d12', name:'Cambiar toallas',     emoji:'🏷️', days: [1,3,5] },
+  { id:'d13', name:'Lista de compras',    emoji:'🛒', days: [5] },
+];
+
+const WEEK_DAYS_ES = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+const WEEK_SHORT = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const MEALS = ['desayuno','almuerzo','cena'];
+const MEAL_LABELS = { desayuno:'☀️ Desayuno', almuerzo:'🌤️ Almuerzo', cena:'🌙 Cena' };
+
+const STORAGE_KEY = 'casaTracker_v4';
+const PIN_CODE = '1234';
+
+let state = loadState();
+let currentRole = 'worker';
+let currentTab = 'monthly';
+let selectedDate = new Date();
+let weekOffset = 0;
+let menuWeekOffset = 0;
+let obsTarget = null;
+let pinValue = '';
+
+// ═══════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const s = raw ? JSON.parse(raw) : {};
+    return {
+      monthly:  s.monthly  || {},
+      daily:    s.daily    || {},
+      shopping: s.shopping || [],
+      menus:    s.menus    || {},  // { 'YYYY-MM-DD': { desayuno:'', almuerzo:'', cena:'' } }
+    };
+  } catch { return { monthly:{}, daily:{}, shopping:[], menus:{} }; }
+}
+function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+// ═══════════════════════════════════════
+// PIN
+// ═══════════════════════════════════════
+function showPin() {
+  pinValue = '';
+  document.getElementById('pin-error').textContent = '';
+  updatePinDots();
+  document.getElementById('pin-screen').classList.add('open');
+}
+function closePin() {
+  pinValue = '';
+  updatePinDots();
+  document.getElementById('pin-screen').classList.remove('open');
+}
+function pinKey(k) {
+  if (pinValue.length >= 4) return;
+  pinValue += k;
+  updatePinDots();
+  if (pinValue.length === 4) {
+    setTimeout(() => {
+      if (pinValue === PIN_CODE) {
+        document.getElementById('pin-screen').classList.remove('open');
+        enterApp('supervisor');
+      } else {
+        document.getElementById('pin-error').textContent = '❌ Código incorrecto';
+        pinValue = '';
+        updatePinDots();
+      }
+    }, 200);
+  }
+}
+function pinDel() {
+  pinValue = pinValue.slice(0,-1);
+  updatePinDots();
+  document.getElementById('pin-error').textContent = '';
+}
+function updatePinDots() {
+  for (let i=0;i<4;i++) {
+    document.getElementById('pd'+i).classList.toggle('filled', i < pinValue.length);
+  }
+}
+
+// ═══════════════════════════════════════
+// ROLE / NAV
+// ═══════════════════════════════════════
+function enterApp(role) {
+  currentRole = role;
+  document.getElementById('role-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('role-badge').textContent =
+    role === 'worker' ? '👩‍🍳 Cambiar' : '👑 Cambiar';
+  buildTabs();
+  setHeaderDate();
+  switchTab(role === 'supervisor' ? 'dashboard' : 'monthly');
+}
+function backToRoles() {
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('role-screen').style.display = 'flex';
+}
+function buildTabs() {
+  const container = document.getElementById('main-tabs');
+  container.innerHTML = '';
+  const tabs = currentRole === 'supervisor'
+    ? [
+        { id:'dashboard', label:'📊 Seguimiento' },
+        { id:'monthly',   label:'📅 Mensual' },
+        { id:'daily',     label:'🗓️ Diario' },
+        { id:'menu',      label:'🍽️ Menú' },
+        { id:'shopping',  label:'🛒 Compras' },
+      ]
+    : [
+        { id:'monthly',  label:'📅 Mensual' },
+        { id:'daily',    label:'🗓️ Diario' },
+        { id:'menu',     label:'🍽️ Menú' },
+        { id:'shopping', label:'🛒 Compras' },
+      ];
+  tabs.forEach(t => {
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn';
+    btn.textContent = t.label;
+    btn.onclick = () => switchTab(t.id);
+    btn.dataset.tab = t.id;
+    container.appendChild(btn);
+  });
+}
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.getElementById('tab-' + tab).classList.add('active');
+  renderTab(tab);
+}
+function renderTab(tab) {
+  if (tab === 'monthly')   renderMonthly();
+  else if (tab === 'daily')    renderDaily();
+  else if (tab === 'menu')     renderMenu();
+  else if (tab === 'shopping') renderShopping();
+  else if (tab === 'dashboard')renderDashboard();
+}
+function setHeaderDate() {
+  const d = new Date();
+  document.getElementById('header-date').textContent =
+    d.toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long' });
+}
+
+// ═══════════════════════════════════════
+// MONTHLY
+// ═══════════════════════════════════════
+function getMonthKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth()+1}`;
+}
+function renderMonthly() {
+  const key = getMonthKey();
+  if (!state.monthly[key]) state.monthly[key] = {};
+  const mData = state.monthly[key];
+  const container = document.getElementById('monthly-content');
+  const d = new Date();
+  const monthName = d.toLocaleDateString('es-ES', { month:'long', year:'numeric' });
+  const done = MONTHLY_ACTS.filter(a => mData[a.id]?.done).length;
+  container.innerHTML = `
+    <div class="dash-header" style="margin-bottom:1rem">
+      <div class="dash-greeting">📅 ${monthName.charAt(0).toUpperCase()+monthName.slice(1)}</div>
+      <div class="dash-sub">${done} de ${MONTHLY_ACTS.length} completadas</div>
+      <div class="prog-bar" style="margin-top:8px">
+        <div class="prog-fill" style="width:${Math.round(done/MONTHLY_ACTS.length*100)}%"></div>
+      </div>
+    </div>
+  `;
+  MONTHLY_ACTS.forEach(act => {
+    const rec = mData[act.id] || {};
+    container.appendChild(buildActivityCard(act, !!rec.done, rec.time, rec.obs, 'monthly', key));
+  });
+}
+
+// ═══════════════════════════════════════
+// DAILY
+// ═══════════════════════════════════════
+function dateKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function getWeekDays(offset) {
+  const today = new Date();
+  const base = new Date(today);
+  base.setDate(base.getDate() + offset * 7);
+  const dow = base.getDay() === 0 ? 6 : base.getDay() - 1;
+  const mon = new Date(base); mon.setDate(base.getDate() - dow);
+  const days = [];
+  for (let i=0;i<7;i++) { const d = new Date(mon); d.setDate(mon.getDate()+i); days.push(d); }
+  return days;
+}
+function renderDayTabs(days) {
+  const todayKey = dateKey(new Date());
+  const selKey   = dateKey(selectedDate);
+  const container = document.getElementById('day-tabs');
+  container.innerHTML = '';
+  days.forEach(d => {
+    const dk = dateKey(d);
+    const dd = state.daily[dk] || {};
+    const acts = DAILY_ACTS.filter(a => !a.days || a.days.includes(d.getDay()));
+    const done = acts.filter(a => dd[a.id]?.done).length;
+    const dotClass = acts.length===0?'empty': done===acts.length?'all-done': done>0?'has-tasks':'empty';
+    const tab = document.createElement('div');
+    tab.className = 'day-tab' + (dk===todayKey?' today':'') + (dk===selKey?' selected':'');
+    tab.innerHTML = `<span class="day-name">${WEEK_SHORT[d.getDay()]}</span><span class="day-num">${d.getDate()}</span><div class="day-dot ${dotClass}"></div>`;
+    tab.onclick = () => { selectedDate = d; renderDaily(); };
+    container.appendChild(tab);
+  });
+}
+function renderDaily() {
+  const days = getWeekDays(weekOffset);
+  const fmt = d => d.toLocaleDateString('es-ES',{day:'numeric',month:'short'});
+  document.getElementById('week-label').textContent = `${fmt(days[0])} – ${fmt(days[6])}`;
+  if (!days.some(d => dateKey(d)===dateKey(selectedDate))) selectedDate = days[0];
+  renderDayTabs(days);
+  const dk = dateKey(selectedDate);
+  if (!state.daily[dk]) state.daily[dk] = {};
+  const dayData = state.daily[dk];
+  const container = document.getElementById('daily-content');
+  container.innerHTML = '';
+  const acts = DAILY_ACTS.filter(a => !a.days || a.days.includes(selectedDate.getDay()));
+  const done = acts.filter(a => dayData[a.id]?.done).length;
+  const dayName = selectedDate.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'});
+  const header = document.createElement('div');
+  header.className = 'dash-header'; header.style.marginBottom='1rem';
+  header.innerHTML = `
+    <div class="dash-greeting">🗓️ ${dayName.charAt(0).toUpperCase()+dayName.slice(1)}</div>
+    <div class="dash-sub">${done} de ${acts.length} completadas</div>
+    <div class="prog-bar" style="margin-top:8px"><div class="prog-fill" style="width:${acts.length?Math.round(done/acts.length*100):0}%"></div></div>
+  `;
+  container.appendChild(header);
+  if (!acts.length) { container.innerHTML += '<div class="empty-state"><div class="es-icon">🌙</div><p>Sin actividades</p></div>'; return; }
+  const always = acts.filter(a => !a.days);
+  const cond   = acts.filter(a =>  a.days);
+  if (always.length) {
+    const lbl = document.createElement('div'); lbl.className='section-title'; lbl.textContent='✨ Actividades diarias';
+    container.appendChild(lbl);
+    always.forEach(act => { const rec=dayData[act.id]||{}; container.appendChild(buildActivityCard(act,!!rec.done,rec.time,rec.obs,'daily',dk)); });
+  }
+  if (cond.length) {
+    const lbl = document.createElement('div'); lbl.className='section-title'; lbl.textContent='📌 Actividades de este día';
+    container.appendChild(lbl);
+    cond.forEach(act => { const rec=dayData[act.id]||{}; container.appendChild(buildActivityCard(act,!!rec.done,rec.time,rec.obs,'daily',dk)); });
+  }
+}
+function changeWeek(dir) { weekOffset += dir; renderDaily(); }
+
+// ═══════════════════════════════════════
+// MENU SEMANAL
+// ═══════════════════════════════════════
+function renderMenu() {
+  const container = document.getElementById('menu-content');
+  container.innerHTML = '';
+  const isEditable = currentRole === 'supervisor';
+  const days = getWeekDays(menuWeekOffset);
+  const today = dateKey(new Date());
+  const fmt = d => d.toLocaleDateString('es-ES',{day:'numeric',month:'short'});
+
+  // week nav
+  const nav = document.createElement('div');
+  nav.className = 'week-nav';
+  nav.innerHTML = `
+    <button class="week-nav-btn" onclick="changeMenuWeek(-1)">‹</button>
+    <div class="week-label">${fmt(days[0])} – ${fmt(days[6])}</div>
+    <button class="week-nav-btn" onclick="changeMenuWeek(1)">›</button>
+  `;
+  container.appendChild(nav);
+
+  const hdr = document.createElement('div');
+  hdr.className = 'dash-header';
+  hdr.innerHTML = `
+    <div class="dash-greeting">🍽️ Menú de la semana</div>
+    <div class="dash-sub">${isEditable ? 'Puedes editar los menús de cada día' : 'Consulta los menús planificados'}</div>
+  `;
+  container.appendChild(hdr);
+
+  const grid = document.createElement('div');
+  grid.className = 'menu-week-grid';
+
+  days.forEach(d => {
+    const dk = dateKey(d);
+    if (!state.menus[dk]) state.menus[dk] = { desayuno:'', almuerzo:'', cena:'' };
+    const menuDay = state.menus[dk];
+    const isToday = dk === today;
+
+    const card = document.createElement('div');
+    card.className = 'menu-day-card';
+
+    const dayLabel = WEEK_DAYS_ES[d.getDay()] + ' ' + d.getDate();
+    card.innerHTML = `<div class="menu-day-header ${isToday?'today-header':''}">
+      ${isToday?'⭐ ':''}${dayLabel}
+    </div>`;
+
+    const meals = document.createElement('div');
+    meals.className = 'menu-meals';
+
+    MEALS.forEach(meal => {
+      const row = document.createElement('div');
+      row.className = 'meal-row';
+
+      if (isEditable) {
+        row.innerHTML = `
+          <span class="meal-label">${MEAL_LABELS[meal]}</span>
+          <input class="meal-input" id="mi-${dk}-${meal}" value="${menuDay[meal]||''}" placeholder="Escribe el menú...">
+          <button class="meal-save-btn" onclick="saveMenu('${dk}','${meal}')">✓ Guardar</button>
+        `;
+      } else {
+        const val = menuDay[meal] || '';
+        row.innerHTML = `
+          <span class="meal-label">${MEAL_LABELS[meal]}</span>
+          <span class="meal-value ${val?'':'empty-meal'}">${val || 'Sin planificar'}</span>
+        `;
+      }
+      meals.appendChild(row);
+    });
+
+    card.appendChild(meals);
+    grid.appendChild(card);
+  });
+  container.appendChild(grid);
+}
+
+function saveMenu(dk, meal) {
+  const input = document.getElementById(`mi-${dk}-${meal}`);
+  if (!input) return;
+  if (!state.menus[dk]) state.menus[dk] = {};
+  state.menus[dk][meal] = input.value.trim();
+  saveState();
+  showToast('🍽️ Menú guardado');
+}
+function changeMenuWeek(dir) { menuWeekOffset += dir; renderMenu(); }
+
+// ═══════════════════════════════════════
+// ACTIVITY CARD
+// ═══════════════════════════════════════
+function buildActivityCard(act, isDone, time, obs, type, key) {
+  const card = document.createElement('div');
+  card.className = 'activity-card' + (isDone?' done':'');
+  card.style.borderLeftColor = isDone ? 'var(--mint-dark)' : 'var(--lavender-mid)';
+  const isReadOnly = currentRole === 'supervisor';
+  let checkHtml = isReadOnly
+    ? `<div class="check-display ${isDone?'done-icon':'pending-icon'}">${isDone?'✓':'·'}</div>`
+    : `<button class="check-btn ${isDone?'checked':''}" onclick="toggleAct('${type}','${key}','${act.id}',this)"></button>`;
+  const timePart = time ? `<span class="act-time">⏰ ${time}</span>` : '';
+  const obsPart  = obs  ? `<span class="act-obs">💬 ${obs}</span>`  : '';
+  const obsBtn   = !isReadOnly
+    ? `<button class="obs-btn" onclick="openModal('${type}','${key}','${act.id}','${act.emoji} ${act.name}')">📝</button>`
+    : '';
+  card.innerHTML = `
+    ${checkHtml}
+    <div class="act-content">
+      <div class="act-name"><span class="act-emoji">${act.emoji}</span>${act.name}</div>
+      ${(timePart||obsPart)?`<div class="act-meta">${timePart}${obsPart}</div>`:''}
+    </div>
+    ${obsBtn}
+  `;
+  return card;
+}
+
+function toggleAct(type, key, actId, btn) {
+  const store = type==='monthly' ? state.monthly : state.daily;
+  if (!store[key]) store[key] = {};
+  const rec = store[key][actId] || {};
+  const now = new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+  if (!rec.done) {
+    store[key][actId] = { done:true, time:now, obs:rec.obs||'' };
+    btn.classList.add('checked','just-checked');
+    setTimeout(()=>btn.classList.remove('just-checked'),400);
+    showToast('✅ ¡Actividad marcada!');
+  } else {
+    store[key][actId] = { done:false, time:'', obs:rec.obs||'' };
+    btn.classList.remove('checked');
+    showToast('↩️ Desmarcada');
+  }
+  saveState();
+  renderTab(currentTab);
+}
+
+// ═══════════════════════════════════════
+// OBS MODAL
+// ═══════════════════════════════════════
+function openModal(type, key, actId, name) {
+  const store = type==='monthly' ? state.monthly : state.daily;
+  const rec = (store[key]||{})[actId]||{};
+  obsTarget = {type, key, actId};
+  document.getElementById('modal-act-name').textContent = '📝 ' + name;
+  document.getElementById('obs-textarea').value = rec.obs||'';
+  document.getElementById('obs-modal').classList.add('open');
+}
+function closeModal() { document.getElementById('obs-modal').classList.remove('open'); obsTarget=null; }
+function saveObs() {
+  if (!obsTarget) return;
+  const {type,key,actId} = obsTarget;
+  const store = type==='monthly' ? state.monthly : state.daily;
+  if (!store[key]) store[key]={};
+  if (!store[key][actId]) store[key][actId]={};
+  store[key][actId].obs = document.getElementById('obs-textarea').value.trim();
+  saveState(); closeModal(); showToast('💬 Observación guardada'); renderTab(currentTab);
+}
+
+// ═══════════════════════════════════════
+// SHOPPING
+// ═══════════════════════════════════════
+function renderShopping() {
+  const container = document.getElementById('shopping-content');
+  const isReadOnly = currentRole === 'supervisor';
+  container.innerHTML = '';
+  const total = state.shopping.length;
+  const bought = state.shopping.filter(i=>i.bought).length;
+  const hdr = document.createElement('div');
+  hdr.className = 'dash-header'; hdr.style.marginBottom='1rem';
+  hdr.innerHTML = `<div class="dash-greeting">🛒 Lista de Compras</div><div class="dash-sub">${bought} de ${total} artículos comprados</div>`;
+  container.appendChild(hdr);
+
+  if (!isReadOnly) {
+    const row = document.createElement('div'); row.className='shop-input-row';
+    row.innerHTML = `<input class="shop-input" id="shop-input" placeholder="Agregar artículo..." onkeydown="if(event.key==='Enter')addShopItem()"><button class="shop-add-btn" onclick="addShopItem()">+</button>`;
+    container.appendChild(row);
+    const catRow = document.createElement('div'); catRow.style.marginBottom='0.8rem';
+    catRow.innerHTML = `<input class="shop-input" id="shop-cat" placeholder="Categoría (opcional)" style="font-size:0.82rem">`;
+    container.appendChild(catRow);
+  }
+
+  if (!state.shopping.length) {
+    const e = document.createElement('div'); e.className='empty-state';
+    e.innerHTML='<div class="es-icon">🛒</div><p>La lista está vacía</p>';
+    container.appendChild(e); return;
+  }
+  const grouped = {};
+  state.shopping.forEach(item => { const c=item.cat||'Sin categoría'; if(!grouped[c])grouped[c]=[]; grouped[c].push(item); });
+  Object.entries(grouped).forEach(([cat,items]) => {
+    const lbl=document.createElement('div'); lbl.className='shop-cat-label'; lbl.textContent=cat; container.appendChild(lbl);
+    items.forEach(item => {
+      const el=document.createElement('div'); el.className='shop-item'+(item.bought?' bought-item':'');
+      el.innerHTML=`<button class="shop-check ${item.bought?'bought':''}" onclick="toggleShopItem('${item.id}')">${item.bought?'✓':''}</button><span class="shop-item-text">${item.text}</span>${!isReadOnly?`<button class="shop-del" onclick="delShopItem('${item.id}')">🗑️</button>`:''}`;
+      container.appendChild(el);
+    });
+  });
+  if (!isReadOnly) {
+    const cb=document.createElement('button');
+    cb.style.cssText='display:block;margin:1.2rem auto 0;background:var(--pink);color:var(--pink-dark);border:none;border-radius:12px;padding:0.6rem 1.5rem;font-family:Nunito,sans-serif;font-weight:700;font-size:0.85rem;cursor:pointer';
+    cb.textContent='🗑️ Limpiar comprados'; cb.onclick=clearBought; container.appendChild(cb);
+  }
+}
+function addShopItem() {
+  const input=document.getElementById('shop-input'); const catInput=document.getElementById('shop-cat');
+  const text=input.value.trim(); if(!text)return;
+  const cat=catInput?catInput.value.trim():'';
+  state.shopping.push({id:Date.now().toString(),text,cat:cat||'General',bought:false});
+  input.value=''; saveState(); renderShopping();
+}
+function toggleShopItem(id) { const i=state.shopping.find(x=>x.id===id); if(i){i.bought=!i.bought;saveState();renderShopping();} }
+function delShopItem(id) { state.shopping=state.shopping.filter(x=>x.id!==id); saveState();renderShopping(); }
+function clearBought() { state.shopping=state.shopping.filter(x=>!x.bought); saveState();renderShopping(); }
+
+// ═══════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════
+function renderDashboard() {
+  const container = document.getElementById('dashboard-content');
+  container.innerHTML = '';
+  const today = new Date();
+  const todayKey = dateKey(today);
+  const todayDayData = state.daily[todayKey]||{};
+  const monthKey = getMonthKey();
+  const monthData = state.monthly[monthKey]||{};
+  const todayActs = DAILY_ACTS.filter(a=>!a.days||a.days.includes(today.getDay()));
+  const todayDone = todayActs.filter(a=>todayDayData[a.id]?.done).length;
+  const monthDone = MONTHLY_ACTS.filter(a=>monthData[a.id]?.done).length;
+  const shopTotal = state.shopping.length;
+  const shopBought = state.shopping.filter(i=>i.bought).length;
+
+  const hdr=document.createElement('div'); hdr.className='dash-header';
+  hdr.innerHTML=`<div class="dash-greeting">👑 Seguimiento de Actividades</div><div class="dash-sub">${today.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>`;
+  container.appendChild(hdr);
+
+  const grid=document.createElement('div'); grid.className='dash-stats';
+  grid.innerHTML=`
+    <div class="stat-card"><div class="stat-num" style="color:var(--mint-dark)">${todayDone}/${todayActs.length}</div><div class="stat-label">Actividades hoy</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--lavender-dark)">${monthDone}/${MONTHLY_ACTS.length}</div><div class="stat-label">Actividades mes</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--peach-dark)">${todayActs.length?Math.round(todayDone/todayActs.length*100):0}%</div><div class="stat-label">Cumplimiento hoy</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--pink-dark)">${shopBought}/${shopTotal}</div><div class="stat-label">Compras hechas</div></div>
+  `;
+  container.appendChild(grid);
+
+  const lbl1=document.createElement('div'); lbl1.className='section-title'; lbl1.textContent='🗓️ Detalle de hoy';
+  container.appendChild(lbl1);
+  todayActs.forEach(act => { const rec=todayDayData[act.id]||{}; container.appendChild(buildActivityCard(act,!!rec.done,rec.time,rec.obs,'daily',todayKey)); });
+
+  const lbl2=document.createElement('div'); lbl2.className='section-title'; lbl2.style.marginTop='1.5rem'; lbl2.textContent='📅 Resumen mensual';
+  container.appendChild(lbl2);
+  MONTHLY_ACTS.forEach(act => { const rec=monthData[act.id]||{}; container.appendChild(buildActivityCard(act,!!rec.done,rec.time,rec.obs,'monthly',monthKey)); });
+
+  const lbl3=document.createElement('div'); lbl3.className='section-title'; lbl3.style.marginTop='1.5rem'; lbl3.textContent='📊 Esta semana';
+  container.appendChild(lbl3);
+  const dow=today.getDay()===0?6:today.getDay()-1;
+  const mon=new Date(today); mon.setDate(today.getDate()-dow);
+  for(let i=0;i<=dow;i++) {
+    const d=new Date(mon); d.setDate(mon.getDate()+i);
+    const dk=dateKey(d); const dd=state.daily[dk]||{};
+    const acts=DAILY_ACTS.filter(a=>!a.days||a.days.includes(d.getDay()));
+    const done=acts.filter(a=>dd[a.id]?.done).length;
+    const pct=acts.length?Math.round(done/acts.length*100):0;
+    const pc=document.createElement('div'); pc.className='progress-card';
+    pc.innerHTML=`<div class="prog-header"><span class="prog-name">${WEEK_SHORT[d.getDay()]} ${d.getDate()}</span><span class="prog-pct">${pct}%</span></div><div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div><div class="prog-meta">${done} de ${acts.length} actividades</div>`;
+    container.appendChild(pc);
+  }
+}
+
+// ═══════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════
+let toastTimer;
+function showToast(msg) {
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2000);
+}
+
+document.getElementById('obs-modal').addEventListener('click',function(e){if(e.target===this)closeModal();});
+setHeaderDate();
+</script>
+</body>
+</html>
